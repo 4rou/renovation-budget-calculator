@@ -1,0 +1,688 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>家装预算快速估算器</title>
+  <script src="https://cdn.tailwindcss.com">
+</script>
+  <style>
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] { -moz-appearance: textfield; }
+    input.room-name {
+      caret-color: #111;
+      border-bottom: 1px dashed #d1d5db;
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+    }
+    input.room-name:hover {
+      border-bottom-color: #9ca3af;
+      background-color: #f3f4f6;
+    }
+    input.room-name:focus {
+      border-bottom-color: #111;
+      border-bottom-style: solid;
+      background-color: #e5e7eb;
+    }
+    .fade-in {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .result-number { font-variant-numeric: tabular-nums; }
+    .tab-indicator {
+      transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .room-card { transition: all 0.2s ease; }
+    input.expr-input { font-variant-numeric: tabular-nums; }
+    .group-appear {
+      animation: groupAppear 0.25s ease-out;
+    }
+    @keyframes groupAppear {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .room-card.room-calculated {
+      border-left: 3px solid #10b981;
+      background-color: #f0fdf4;
+      box-shadow: 0 1px 3px rgba(16, 185, 129, 0.06);
+    }
+    .room-card.room-calculated .room-name {
+      border-bottom-color: #6ee7b7;
+    }
+    .room-card.room-calculated .room-name:hover {
+      border-bottom-color: #34d399;
+      background-color: #ecfdf5;
+    }
+    .room-card.room-calculated .room-name:focus {
+      border-bottom-color: #10b981;
+      background-color: #d1fae5;
+    }
+    .room-card.room-calculated .room-result {
+      border-top-color: #a7f3d0;
+    }
+    .group-label { color: #6b7280; }
+    .expr-input:focus {
+      border-color: #9ca3af !important;
+      box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1) !important;
+    }
+    .room-card:not(.room-calculated):hover {
+      border-color: #d1d5db;
+      background-color: #f9fafb;
+    }
+    .add-group-btn:hover { color: #374151; }
+    .btn-primary { background-color: #1f2937; }
+    .btn-primary:hover { background-color: #111827; }
+    .btn-secondary { color: #6b7280; border-color: #d1d5db; }
+    .btn-secondary:hover { color: #374151; border-color: #9ca3af; }
+    .summary-number { color: #111827; }
+  </style>
+</head>
+<body class="bg-neutral-50 text-neutral-900 min-h-screen flex flex-col items-center px-4 py-8 sm:py-14">
+  <div class="w-full max-w-lg mx-auto">
+
+    <header class="text-center mb-8 sm:mb-10">
+      <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900">家装预算快速估算器</h1>
+      <p class="mt-1.5 text-sm text-neutral-400">每个房间可添加多组柜子，输入算式按回车快速计算</p>
+    </header>
+
+    <div class="relative flex border-b border-neutral-200 mb-8">
+      <button id="tabCabinet" class="tab-btn relative flex-1 pb-3 text-sm sm:text-base font-medium text-neutral-900 transition-colors duration-200" data-tab="cabinet">柜子计算器</button>
+      <button id="tabWindow" class="tab-btn relative flex-1 pb-3 text-sm sm:text-base font-medium text-neutral-300 hover:text-neutral-500 transition-colors duration-200" data-tab="window">窗户计算器</button>
+      <div id="tabIndicator" class="tab-indicator absolute bottom-0 h-0.5 bg-neutral-900 rounded-full"></div>
+    </div>
+
+    <div id="panelCabinet" class="tab-panel">
+      <div class="bg-white rounded-xl shadow-sm border border-neutral-100 p-5 sm:p-7">
+        <div id="cabinetRooms" class="space-y-4"></div>
+
+        <div class="flex items-end gap-3 pt-2 mt-2">
+          <div class="flex-1">
+            <label class="group-label block text-[10px] font-medium uppercase tracking-wider mb-1">统一单价 (元/㎡)</label>
+            <input type="text" inputmode="decimal" id="cabinetBulkPrice" value="1000" class="expr-input w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-900 transition-colors" />
+          </div>
+          <button id="applyCabinetBulk" class="flex-shrink-0 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-800 text-sm font-medium rounded-lg transition-colors">应用到全部</button>
+        </div>
+        <div class="flex items-end gap-3">
+          <div class="flex-1">
+            <label class="group-label block text-[10px] font-medium uppercase tracking-wider mb-1">统一高度 (mm)</label>
+            <input type="text" inputmode="decimal" id="cabinetBulkHeight" value="2500" class="expr-input w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-900 transition-colors" />
+          </div>
+          <button id="applyCabinetBulkHeight" class="flex-shrink-0 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-800 text-sm font-medium rounded-lg transition-colors">应用到全部</button>
+        </div>
+
+        <button id="addCabinetRoom" class="btn-secondary mt-3 w-full py-2.5 border border-dashed rounded-lg text-sm transition-colors">+ 添加房间</button>
+        <button id="calcCabinetBtn" class="btn-primary mt-4 w-full py-3.5 text-white text-sm font-medium rounded-lg transition-colors duration-200 active:scale-[0.98]">计算全部</button>
+        <div id="cabinetSummary" class="mt-6 hidden">
+          <div class="border-t border-neutral-100 pt-5 space-y-4 fade-in">
+            <div class="flex items-baseline justify-between">
+              <span class="text-sm text-neutral-500">总投影面积</span>
+              <span class="text-2xl sm:text-3xl font-semibold summary-number result-number">
+                <span id="cabinetTotalArea">0.00</span> <span class="text-base font-normal text-neutral-400">㎡</span>
+              </span>
+            </div>
+            <div class="flex items-baseline justify-between">
+              <span class="text-sm text-neutral-500">总预估价格</span>
+              <span class="text-2xl sm:text-3xl font-semibold summary-number result-number">
+                <span id="cabinetGrandTotal">0.00</span> <span class="text-base font-normal text-neutral-400">元</span>
+              </span>
+            </div>
+          </div>
+          <div id="cabinetRoomDetails" class="hidden mt-3 pt-3 border-t border-neutral-100">
+            <div class="text-[10px] font-medium text-neutral-400 uppercase tracking-wider mb-1.5">房间明细</div>
+            <div id="cabinetRoomDetailList" class="space-y-1"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="panelWindow" class="tab-panel hidden">
+      <div class="bg-white rounded-xl shadow-sm border border-neutral-100 p-5 sm:p-7">
+        <div id="windowRooms" class="space-y-4"></div>
+
+        <div class="flex items-end gap-3 pt-2 mt-2">
+          <div class="flex-1">
+            <label class="group-label block text-[10px] font-medium uppercase tracking-wider mb-1">统一单价 (元/㎡)</label>
+            <input type="text" inputmode="decimal" id="windowBulkPrice" value="600" class="expr-input w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-900 transition-colors" />
+          </div>
+          <button id="applyWindowBulk" class="flex-shrink-0 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-800 text-sm font-medium rounded-lg transition-colors">应用到全部</button>
+        </div>
+        <div class="flex items-end gap-3">
+          <div class="flex-1">
+            <label class="group-label block text-[10px] font-medium uppercase tracking-wider mb-1">统一高度 (mm)</label>
+            <input type="text" inputmode="decimal" id="windowBulkHeight" value="" class="expr-input w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-900 transition-colors" placeholder="如 1500" />
+          </div>
+          <button id="applyWindowBulkHeight" class="flex-shrink-0 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-800 text-sm font-medium rounded-lg transition-colors">应用到全部</button>
+        </div>
+
+        <button id="addWindowRoom" class="btn-secondary mt-3 w-full py-2.5 border border-dashed rounded-lg text-sm transition-colors">+ 添加房间</button>
+        <button id="calcWindowBtn" class="btn-primary mt-4 w-full py-3.5 text-white text-sm font-medium rounded-lg transition-colors duration-200 active:scale-[0.98]">计算全部</button>
+        <div id="windowSummary" class="mt-6 hidden">
+          <div class="border-t border-neutral-100 pt-5 space-y-4 fade-in">
+            <div class="flex items-baseline justify-between">
+              <span class="text-sm text-neutral-500">总窗户面积</span>
+              <span class="text-2xl sm:text-3xl font-semibold summary-number result-number">
+                <span id="windowTotalArea">0.00</span> <span class="text-base font-normal text-neutral-400">㎡</span>
+              </span>
+            </div>
+            <div class="flex items-baseline justify-between">
+              <span class="text-sm text-neutral-500">总预估价格</span>
+              <span class="text-2xl sm:text-3xl font-semibold summary-number result-number">
+                <span id="windowGrandTotal">0.00</span> <span class="text-base font-normal text-neutral-400">元</span>
+              </span>
+            </div>
+          </div>
+          <div id="windowRoomDetails" class="hidden mt-3 pt-3 border-t border-neutral-100">
+            <div class="text-[10px] font-medium text-neutral-400 uppercase tracking-wider mb-1.5">房间明细</div>
+            <div id="windowRoomDetailList" class="space-y-1"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-6 text-center">
+      <button id="exportBtn" class="text-xs text-neutral-400 hover:text-neutral-700 transition-colors underline decoration-dotted underline-offset-2 cursor-pointer">导出数据</button>
+    </div>
+    <p class="mt-2 text-center text-xs text-neutral-400">所有结果仅供参考，最终价格请以正式报价单为准</p>
+  </div><script>
+    (function() {
+      'use strict';
+
+      function tryEvaluateExpression(str) {
+        str = str.trim();
+        if (!/^[\d+\-*/().\s]+$/.test(str)) return null;
+        try {
+          var r = new Function('return (' + str + ')')();
+          if (typeof r === 'number' && isFinite(r)) return Math.round(r * 100) / 100;
+        } catch(e) {}
+        return null;
+      }
+
+      var tabCabinet = document.getElementById('tabCabinet');
+      var tabWindow  = document.getElementById('tabWindow');
+      var indicator  = document.getElementById('tabIndicator');
+      var panelCabinet = document.getElementById('panelCabinet');
+      var panelWindow  = document.getElementById('panelWindow');
+
+      function updateIndicator(el) {
+        var c = el.parentElement, cr = c.getBoundingClientRect(), er = el.getBoundingClientRect();
+        indicator.style.width = er.width + 'px';
+        indicator.style.left  = (er.left - cr.left) + 'px';
+      }
+
+      function switchTab(name) {
+        [tabCabinet, tabWindow].forEach(function(b) {
+          b.classList.toggle('text-neutral-900', b.dataset.tab === name);
+          b.classList.toggle('text-neutral-300', b.dataset.tab !== name);
+        });
+        panelCabinet.classList.toggle('hidden', name !== 'cabinet');
+        panelWindow.classList.toggle('hidden', name !== 'window');
+        requestAnimationFrame(function() { updateIndicator(name === 'cabinet' ? tabCabinet : tabWindow); });
+      }
+
+      tabCabinet.addEventListener('click', function() { switchTab('cabinet'); });
+      tabWindow.addEventListener('click',  function() { switchTab('window'); });
+
+      function createGroupInputs(defaults, extraFields) {
+        var group = document.createElement('div');
+        group.className = 'room-group';
+        var grid = document.createElement('div');
+        grid.className = 'grid grid-cols-2 gap-3';
+        var fields = [
+          { label: '宽度 (mm)',   cls: 'room-width',  val: defaults.width,  ph: '如 2000' },
+          { label: '高度 (mm)',   cls: 'room-height', val: defaults.height, ph: '如 2500' },
+          { label: '单价 (元/㎡)', cls: 'room-unit',   val: defaults.unitPrice, ph: '如 1000' },
+          { label: '加价 (元)',   cls: 'room-extra',  val: defaults.extra,  ph: '如 0' }
+        ];
+        if (extraFields && extraFields.length) {
+          extraFields.forEach(function(f) { fields.push(f); });
+        }
+        fields.forEach(function(f, i) {
+          var w = document.createElement('div');
+          if (i === fields.length - 1 && fields.length % 2 === 1) {
+            w.className = 'col-span-2';
+          }
+          var lb = document.createElement('label');
+          lb.className = 'group-label block text-[10px] font-medium uppercase tracking-wider mb-1';
+          lb.textContent = f.label;
+          var inp = document.createElement('input');
+          inp.type = 'text';
+          inp.inputMode = 'decimal';
+          inp.className = f.cls + ' expr-input w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-900 transition-colors';
+          inp.placeholder = f.ph;
+          if (f.val !== '' && f.val !== 0) inp.value = f.val;
+          w.appendChild(lb);
+          w.appendChild(inp);
+          grid.appendChild(w);
+        });
+        group.appendChild(grid);
+        return group;
+      }
+
+      function addGroupToRoom(container, defaults, extraFields) {
+        var groups = container.querySelectorAll('.room-group');
+        var index = groups.length;
+        var header = document.createElement('div');
+        header.className = 'flex items-center gap-2';
+        var labelSpan = document.createElement('span');
+        labelSpan.className = 'group-label text-[10px] font-medium uppercase tracking-wider';
+        labelSpan.textContent = '组 ' + (index + 1);
+        var line = document.createElement('span');
+        line.className = 'flex-1 border-t border-neutral-100';
+        header.appendChild(labelSpan);
+        header.appendChild(line);
+        var rmBtn = document.createElement('button');
+        rmBtn.type = 'button';
+        rmBtn.className = 'text-neutral-300 hover:text-red-400 transition-colors text-sm leading-none p-0.5 ml-1';
+        rmBtn.innerHTML = '&times;';
+        rmBtn.title = '删除该组';
+        rmBtn.addEventListener('click', function() {
+          if (container.querySelectorAll('.room-group').length <= 1) return;
+          groupEl.remove();
+          renumberGroupsInRoom(container);
+        });
+        header.appendChild(rmBtn);
+        var groupEl = document.createElement('div');
+        groupEl.className = 'room-group group-appear';
+        groupEl.appendChild(header);
+        groupEl.appendChild(createGroupInputs(defaults, extraFields));
+        var addBtn = container.querySelector('.add-group-btn');
+        container.insertBefore(groupEl, addBtn);
+        return groupEl;
+      }
+
+      function renumberGroupsInRoom(container) {
+        var groups = container.querySelectorAll('.room-group');
+        groups.forEach(function(g, i) {
+          var sp = g.querySelector('.text-\\[10px\\]');
+          if (sp) sp.textContent = '组 ' + (i + 1);
+        });
+      }
+
+      function createRoomCard() {
+        var card = document.createElement('div');
+        card.className = 'room-card bg-neutral-50/50 border border-neutral-100 rounded-xl p-4 sm:p-5 space-y-4';
+        var header = document.createElement('div');
+        header.className = 'flex items-center justify-between';
+        var nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.className = 'room-name text-sm font-medium text-neutral-900 bg-transparent px-0.5 py-0.5 w-32';
+        nameInput.placeholder = '房间名称';
+        nameInput.spellcheck = false;
+        var delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'text-neutral-300 hover:text-red-400 transition-colors text-lg leading-none p-1';
+        delBtn.title = '删除此房间';
+        delBtn.innerHTML = '&times;';
+        delBtn.addEventListener('click', function() {
+          card.remove();
+          renumberRooms(card.closest('[id$=Rooms]').id);
+        });
+        header.appendChild(nameInput);
+        header.appendChild(delBtn);
+        card.appendChild(header);
+        var groupsWrap = document.createElement('div');
+        groupsWrap.className = 'room-groups-wrap space-y-3';
+        var addGroupBtn = document.createElement('button');
+        addGroupBtn.type = 'button';
+        addGroupBtn.className = 'add-group-btn text-xs text-neutral-400 transition-colors py-1';
+        addGroupBtn.textContent = '+ 添加柜子组';
+        addGroupBtn.addEventListener('click', function() {
+          var wrap = card.querySelector('.room-groups-wrap');
+          var defaults = wrap.dataset.defaults ? JSON.parse(wrap.dataset.defaults) : {};
+          var extraFields = wrap.dataset.extraFields ? JSON.parse(wrap.dataset.extraFields) : [];
+          addGroupToRoom(wrap, defaults, extraFields);
+        });
+        groupsWrap.appendChild(addGroupBtn);
+        card.appendChild(groupsWrap);
+        var resultWrap = document.createElement('div');
+        resultWrap.className = 'room-result hidden';
+        resultWrap.innerHTML =
+          '<div class="border-t border-neutral-200 pt-3 space-y-2 fade-in">' +
+            '<div class="flex items-baseline justify-between">' +
+              '<span class="text-xs text-neutral-400 area-label">面积</span>' +
+              '<span class="text-lg font-semibold text-neutral-900 result-number">' +
+                '<span class="room-area-display">0.00</span> <span class="text-xs font-normal text-neutral-400">㎡</span>' +
+              '</span>' +
+            '</div>' +
+            '<div class="flex items-baseline justify-between">' +
+              '<span class="text-xs text-neutral-400">小计</span>' +
+              '<span class="text-lg font-semibold text-neutral-900 result-number">' +
+                '<span class="room-total-display">0.00</span> <span class="text-xs font-normal text-neutral-400">元</span>' +
+              '</span>' +
+            '</div>' +
+          '</div>';
+        card.appendChild(resultWrap);
+        return card;
+      }
+
+      function renumberRooms(containerId) {
+        var c = document.getElementById(containerId);
+        if (!c) return;
+        c.querySelectorAll('.room-card').forEach(function(card, idx) {
+          var inp = card.querySelector('.room-name');
+          if (!inp) return;
+          var val = inp.value.trim();
+          if (val === '' || /^房间 \d+$/.test(val)) inp.value = '房间 ' + (idx + 1);
+        });
+      }
+
+      function setGroupValues(groupEl, data) {
+        groupEl.querySelector('.room-width').value  = data.w != null ? data.w : '';
+        groupEl.querySelector('.room-height').value = data.h != null ? data.h : '';
+        groupEl.querySelector('.room-unit').value   = data.u != null ? data.u : '';
+        groupEl.querySelector('.room-extra').value  = data.e != null ? data.e : '';
+        var sashEl = groupEl.querySelector('.room-sash-count');
+        if (sashEl && data.sash != null) sashEl.value = data.sash;
+      }
+
+      function buildRoom(card, opts, roomData) {
+        card.querySelector('.room-name').value = roomData.name || ('房间 ' + (opts.index || 1));
+        card.querySelector('.area-label').textContent = opts.areaLabel;
+        var wrap = card.querySelector('.room-groups-wrap');
+        wrap.dataset.defaults = JSON.stringify(opts.defaults);
+        wrap.dataset.extraFields = JSON.stringify(opts.extraFields || []);
+        var defaultBtn = wrap.querySelector('.add-group-btn');
+        if (defaultBtn) defaultBtn.remove();
+        if (!roomData.groups || roomData.groups.length === 0) {
+          addGroupToRoom(wrap, opts.defaults, opts.extraFields);
+          setGroupValues(wrap.querySelector('.room-group'), opts.defaults);
+        } else {
+          roomData.groups.forEach(function(gd, i) {
+            addGroupToRoom(wrap, opts.defaults, opts.extraFields);
+            var allG = wrap.querySelectorAll('.room-group');
+            setGroupValues(allG[allG.length - 1], gd);
+          });
+        }
+        var newBtn = document.createElement('button');
+        newBtn.type = 'button';
+        newBtn.className = 'add-group-btn text-xs text-neutral-400 transition-colors py-1';
+        newBtn.textContent = '+ 添加柜子组';
+        newBtn.addEventListener('click', function() {
+          var w = card.querySelector('.room-groups-wrap');
+          var d = JSON.parse(w.dataset.defaults || '{}');
+          var ef = JSON.parse(w.dataset.extraFields || '[]');
+          addGroupToRoom(w, d, ef);
+        });
+        wrap.appendChild(newBtn);
+        if (roomData.calculated) {
+          card.classList.add('room-calculated');
+          card.querySelector('.room-area-display').textContent = roomData.area || '0.00';
+          card.querySelector('.room-total-display').textContent = roomData.total || '0.00';
+          card.querySelector('.room-result').classList.remove('hidden');
+        }
+      }
+
+      function addRoom(opts, roomData) {
+        var container = document.getElementById(opts.containerId);
+        var card = createRoomCard();
+        container.appendChild(card);
+        var roomOpts = JSON.parse(JSON.stringify(opts));
+        var bulkPrice = document.getElementById(opts.prefix + 'BulkPrice');
+        if (bulkPrice) {
+          var bp = parseFloat(bulkPrice.value);
+          if (!isNaN(bp)) roomOpts.defaults.unitPrice = bp;
+        }
+        var bulkHeight = document.getElementById(opts.prefix + 'BulkHeight');
+        if (bulkHeight) {
+          var bh = parseFloat(bulkHeight.value);
+          if (!isNaN(bh)) roomOpts.defaults.height = bh;
+        }
+        if (!roomOpts.index) roomOpts.index = container.querySelectorAll('.room-card').length;
+        if (roomData) {
+          buildRoom(card, roomOpts, roomData);
+        } else {
+          buildRoom(card, roomOpts, {
+            name: '房间 ' + roomOpts.index,
+            groups: [{ w: '', h: '', u: '', e: '' }],
+            calculated: false
+          });
+        }
+        return card;
+      }
+
+      function applyBulkUnitPrice(prefix) {
+        var bi = document.getElementById(prefix + 'BulkPrice');
+        var price = parseFloat(bi.value);
+        if (isNaN(price)) return;
+        document.getElementById(prefix + 'Rooms').querySelectorAll('.room-unit').forEach(function(inp) { inp.value = price; });
+      }
+
+      function applyBulkHeight(prefix) {
+        var bi = document.getElementById(prefix + 'BulkHeight');
+        var height = parseFloat(bi.value);
+        if (isNaN(height)) return;
+        document.getElementById(prefix + 'Rooms').querySelectorAll('.room-height').forEach(function(inp) { inp.value = height; });
+      }
+
+      function calculateAll(prefix) {
+        var container = document.getElementById(prefix + 'Rooms');
+        var cards = container.querySelectorAll('.room-card');
+        var totalArea = 0, totalCost = 0;
+        var roomDetails = [];
+        cards.forEach(function(card) {
+          var roomArea = 0, roomCost = 0;
+          card.querySelectorAll('.room-group').forEach(function(grp) {
+            var w = parseFloat(grp.querySelector('.room-width').value) || 0;
+            var h = parseFloat(grp.querySelector('.room-height').value) || 0;
+            var up = parseFloat(grp.querySelector('.room-unit').value) || 0;
+            var ext = parseFloat(grp.querySelector('.room-extra').value) || 0;
+            var a = (w / 1000) * (h / 1000);
+            var cost = (a * up) + ext;
+            // 窗扇费用：每扇按一平方单价计算
+            var sashEl = grp.querySelector('.room-sash-count');
+            if (sashEl) {
+              var sash = parseFloat(sashEl.value) || 0;
+              cost += sash * up;
+            }
+            roomArea += a;
+            roomCost += cost;
+          });
+          totalArea += roomArea;
+          totalCost += roomCost;
+          roomDetails.push({ name: card.querySelector('.room-name').value, area: roomArea, cost: roomCost });
+          card.querySelector('.room-area-display').textContent  = roomArea.toFixed(2);
+          card.querySelector('.room-total-display').textContent = roomCost.toFixed(2);
+          card.querySelector('.room-result').classList.remove('hidden');
+          card.classList.remove('room-calculated');
+          void card.offsetHeight;
+          card.classList.add('room-calculated');
+          var fade = card.querySelector('.room-result .fade-in');
+          if (fade) { fade.style.animation = 'none'; void fade.offsetHeight; fade.style.animation = ''; }
+        });
+        document.getElementById(prefix + 'TotalArea').textContent  = totalArea.toFixed(2);
+        document.getElementById(prefix + 'GrandTotal').textContent = totalCost.toFixed(2);
+        var se = document.getElementById(prefix + 'Summary');
+        se.classList.remove('hidden');
+        var sf = se.querySelector('.fade-in');
+        if (sf) { sf.style.animation = 'none'; void sf.offsetHeight; sf.style.animation = ''; }
+
+        var listEl = document.getElementById(prefix + 'RoomDetailList');
+        var detailEl = document.getElementById(prefix + 'RoomDetails');
+        if (listEl && detailEl) {
+          listEl.innerHTML = '';
+          roomDetails.forEach(function(d) {
+            var row = document.createElement('div');
+            row.className = 'flex items-baseline justify-between py-0.5';
+            row.innerHTML = '<span class="text-xs text-neutral-500">' + d.name + '</span>' + '<span class="text-xs text-neutral-700 result-number">' + d.area.toFixed(2) + ' ㎡  /  ' + d.cost.toFixed(2) + ' 元</span>';
+            listEl.appendChild(row);
+          });
+          detailEl.classList.remove('hidden');
+        }
+      }
+
+      function collectTabData(prefix) {
+        var container = document.getElementById(prefix + 'Rooms');
+        var cards = container.querySelectorAll('.room-card');
+        var rooms = [];
+        cards.forEach(function(card) {
+          var groups = [];
+          var roomArea = 0, roomCost = 0;
+          card.querySelectorAll('.room-group').forEach(function(grp) {
+            var w = parseFloat(grp.querySelector('.room-width').value) || 0;
+            var h = parseFloat(grp.querySelector('.room-height').value) || 0;
+            var up = parseFloat(grp.querySelector('.room-unit').value) || 0;
+            var ext = parseFloat(grp.querySelector('.room-extra').value) || 0;
+            var area = (w / 1000) * (h / 1000);
+            var cost = (area * up) + ext;
+            var sash = 0;
+            var sashEl = grp.querySelector('.room-sash-count');
+            if (sashEl) { sash = parseFloat(sashEl.value) || 0; cost += sash * up; }
+            roomArea += area;
+            roomCost += cost;
+            groups.push({ w: w, h: h, up: up, ext: ext, sash: sash, area: area, cost: cost });
+          });
+          rooms.push({
+            name: card.querySelector('.room-name').value,
+            groups: groups,
+            area: roomArea,
+            cost: roomCost
+          });
+        });
+        var totalArea = 0, totalCost = 0;
+        rooms.forEach(function(r) { totalArea += r.area; totalCost += r.cost; });
+        return { rooms: rooms, totalArea: totalArea, totalCost: totalCost, count: rooms.length };
+      }
+
+      function formatReport() {
+        var c = collectTabData('cabinet');
+        var w = collectTabData('window');
+        var now = new Date();
+        var pad = function(n) { return String(n).padStart(2, '0'); };
+        var ds = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) +
+          ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+        var L = [];
+        L.push('家装预算估算报告');
+        L.push('生成时间: ' + ds);
+        L.push('');
+        L.push('【柜子计算器】');
+        L.push('──────────────────────────────');
+        if (c.count === 0) { L.push('(无数据)'); } else {
+          c.rooms.forEach(function(r, i) {
+            L.push('');
+            L.push('房间 ' + (i + 1) + ' · ' + (r.name || '未命名'));
+            r.groups.forEach(function(g, gi) {
+              L.push('  组' + (gi + 1) + ': ' + g.w + '×' + g.h + 'mm  →  ' +
+                g.area.toFixed(2) + '㎡  ×  ' + g.up + '元/㎡' +
+                (g.ext > 0 ? ' + ' + g.ext + '元' : '') + '  =  ' + g.cost.toFixed(2) + '元');
+            });
+            L.push('  → 投影面积: ' + r.area.toFixed(2) + '㎡  |  小计: ' + r.cost.toFixed(2) + '元');
+          });
+          L.push('');
+          L.push('  柜子合计: ' + c.count + ' 个房间');
+          L.push('  总投影面积: ' + c.totalArea.toFixed(2) + ' ㎡');
+          L.push('  总预估价格: ' + c.totalCost.toFixed(2) + ' 元');
+        }
+        L.push('');
+        L.push('【窗户计算器】');
+        L.push('──────────────────────────────');
+        if (w.count === 0) { L.push('(无数据)'); } else {
+          w.rooms.forEach(function(r, i) {
+            L.push('');
+            L.push('房间 ' + (i + 1) + ' · ' + (r.name || '未命名'));
+            r.groups.forEach(function(g, gi) {
+              var sashNote = g.sash > 0 ? (' + ' + g.sash + '扇×' + g.up + '元') : '';
+              L.push('  组' + (gi + 1) + ': ' + g.w + '×' + g.h + 'mm  →  ' +
+                g.area.toFixed(2) + '㎡  ×  ' + g.up + '元/㎡' +
+                sashNote +
+                (g.ext > 0 ? ' + ' + g.ext + '元' : '') + '  =  ' + g.cost.toFixed(2) + '元');
+            });
+            L.push('  → 窗户面积: ' + r.area.toFixed(2) + '㎡  |  小计: ' + r.cost.toFixed(2) + '元');
+          });
+          L.push('');
+          L.push('  窗户合计: ' + w.count + ' 个房间');
+          L.push('  总窗户面积: ' + w.totalArea.toFixed(2) + ' ㎡');
+          L.push('  总预估价格: ' + w.totalCost.toFixed(2) + ' 元');
+        }
+        L.push('');
+        L.push('══════════════════════════════');
+        L.push('总预算: ' + (c.totalCost + w.totalCost).toFixed(2) + ' 元');
+        L.push('');
+        L.push('— 家装预算快速估算器 —');
+        return L.join('\n');
+      }
+
+      function downloadTxt(filename, content) {
+        var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+      }
+
+      function exportData() {
+        var now = new Date();
+        var ds = now.getFullYear() + String(now.getMonth() + 1).padStart(2,'0') + String(now.getDate()).padStart(2,'0');
+        downloadTxt('家装预算估算报告_' + ds + '.txt', formatReport());
+      }
+
+      document.addEventListener('input', function(e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        if (t.classList.contains('room-width') || t.classList.contains('room-height') ||
+            t.classList.contains('room-unit') || t.classList.contains('room-extra') ||
+            t.classList.contains('room-sash-count')) {
+          var card = t.closest('.room-card');
+          if (card && card.classList.contains('room-calculated')) card.classList.remove('room-calculated');
+        }
+      });
+
+      var copts = {
+        containerId: 'cabinetRooms', prefix: 'cabinet',
+        areaLabel: '投影面积',
+        defaults: { width: '', height: 2500, unitPrice: '', extra: '' }
+      };
+      var wopts = {
+        containerId: 'windowRooms', prefix: 'window',
+        areaLabel: '窗户面积',
+        defaults: { width: '', height: '', unitPrice: '', extra: '' },
+        extraFields: [
+          { label: '窗扇数量 (扇)', cls: 'room-sash-count', val: 1, ph: '如 1' }
+        ]
+      };
+
+      document.getElementById('addCabinetRoom').addEventListener('click', function() { addRoom(copts); });
+      document.getElementById('calcCabinetBtn').addEventListener('click', function() { calculateAll('cabinet'); });
+      document.getElementById('applyCabinetBulk').addEventListener('click', function() { applyBulkUnitPrice('cabinet'); });
+      document.getElementById('applyCabinetBulkHeight').addEventListener('click', function() { applyBulkHeight('cabinet'); });
+
+      document.getElementById('addWindowRoom').addEventListener('click', function() { addRoom(wopts); });
+      document.getElementById('calcWindowBtn').addEventListener('click', function() { calculateAll('window'); });
+      document.getElementById('applyWindowBulk').addEventListener('click', function() { applyBulkUnitPrice('window'); });
+      document.getElementById('applyWindowBulkHeight').addEventListener('click', function() { applyBulkHeight('window'); });
+
+      addRoom(copts);
+      addRoom(wopts);
+
+      document.getElementById('exportBtn').addEventListener('click', exportData);
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter') return;
+        var t = e.target;
+        if (!t || t.tagName !== 'INPUT') return;
+        if (t.value && /[+\-*/]/.test(t.value)) {
+          var r = tryEvaluateExpression(t.value);
+          if (r !== null) t.value = r;
+        }
+        var p = t.closest('.tab-panel');
+        if (!p) return;
+        document.getElementById(p.id === 'panelCabinet' ? 'calcCabinetBtn' : 'calcWindowBtn').click();
+      });
+
+    })();
+</script>
+</body>
+</html>
