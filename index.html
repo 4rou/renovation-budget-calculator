@@ -114,8 +114,8 @@
         </div>
         <div class="flex items-end gap-3">
           <div class="flex-1">
-            <label class="group-label block text-[10px] font-medium uppercase tracking-wider mb-1">统一高度 (m)</label>
-            <input type="text" inputmode="decimal" id="cabinetBulkHeight" value="2.5" class="expr-input w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-900 transition-colors" />
+            <label class="group-label block text-[10px] font-medium uppercase tracking-wider mb-1">统一高度 (mm)</label>
+            <input type="text" inputmode="decimal" id="cabinetBulkHeight" value="2500" class="expr-input w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-900 transition-colors" />
           </div>
           <button id="applyCabinetBulkHeight" class="flex-shrink-0 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-800 text-sm font-medium rounded-lg transition-colors">应用到全部</button>
         </div>
@@ -158,8 +158,8 @@
         </div>
         <div class="flex items-end gap-3">
           <div class="flex-1">
-            <label class="group-label block text-[10px] font-medium uppercase tracking-wider mb-1">统一高度 (m)</label>
-            <input type="text" inputmode="decimal" id="windowBulkHeight" value="" class="expr-input w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-900 transition-colors" placeholder="如 1.5" />
+            <label class="group-label block text-[10px] font-medium uppercase tracking-wider mb-1">统一高度 (mm)</label>
+            <input type="text" inputmode="decimal" id="windowBulkHeight" value="" class="expr-input w-full px-3 py-2.5 bg-white border border-neutral-200 rounded-lg text-sm text-neutral-900 transition-colors" placeholder="如 1500" />
           </div>
           <button id="applyWindowBulkHeight" class="flex-shrink-0 px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-800 text-sm font-medium rounded-lg transition-colors">应用到全部</button>
         </div>
@@ -238,8 +238,8 @@
         var grid = document.createElement('div');
         grid.className = 'grid grid-cols-2 gap-3';
         var fields = [
-          { label: '宽度 (m)',   cls: 'room-width',  val: defaults.width,  ph: '如 5' },
-          { label: '高度 (m)',   cls: 'room-height', val: defaults.height, ph: '如 2.5' },
+          { label: '宽度 (mm)',   cls: 'room-width',  val: defaults.width,  ph: '如 2000' },
+          { label: '高度 (mm)',   cls: 'room-height', val: defaults.height, ph: '如 2500' },
           { label: '单价 (元/㎡)', cls: 'room-unit',   val: defaults.unitPrice, ph: '如 1000' },
           { label: '加价 (元)',   cls: 'room-extra',  val: defaults.extra,  ph: '如 0' }
         ];
@@ -476,7 +476,7 @@
             var h = parseFloat(grp.querySelector('.room-height').value) || 0;
             var up = parseFloat(grp.querySelector('.room-unit').value) || 0;
             var ext = parseFloat(grp.querySelector('.room-extra').value) || 0;
-            var a = w * h;
+            var a = (w / 1000) * (h / 1000);
             var cost = (a * up) + ext;
             // 窗扇费用：每扇按一平方单价计算
             var sashEl = grp.querySelector('.room-sash-count');
@@ -532,7 +532,7 @@
             var h = parseFloat(grp.querySelector('.room-height').value) || 0;
             var up = parseFloat(grp.querySelector('.room-unit').value) || 0;
             var ext = parseFloat(grp.querySelector('.room-extra').value) || 0;
-            var area = w * h;
+            var area = (w / 1000) * (h / 1000);
             var cost = (area * up) + ext;
             var sash = 0;
             var sashEl = grp.querySelector('.room-sash-count');
@@ -571,7 +571,7 @@
             L.push('');
             L.push('房间 ' + (i + 1) + ' · ' + (r.name || '未命名'));
             r.groups.forEach(function(g, gi) {
-              L.push('  组' + (gi + 1) + ': ' + g.w + '×' + g.h + 'm  →  ' +
+              L.push('  组' + (gi + 1) + ': ' + g.w + '×' + g.h + 'mm  →  ' +
                 g.area.toFixed(2) + '㎡  ×  ' + g.up + '元/㎡' +
                 (g.ext > 0 ? ' + ' + g.ext + '元' : '') + '  =  ' + g.cost.toFixed(2) + '元');
             });
@@ -591,7 +591,7 @@
             L.push('房间 ' + (i + 1) + ' · ' + (r.name || '未命名'));
             r.groups.forEach(function(g, gi) {
               var sashNote = g.sash > 0 ? (' + ' + g.sash + '扇×' + g.up + '元') : '';
-              L.push('  组' + (gi + 1) + ': ' + g.w + '×' + g.h + 'm  →  ' +
+              L.push('  组' + (gi + 1) + ': ' + g.w + '×' + g.h + 'mm  →  ' +
                 g.area.toFixed(2) + '㎡  ×  ' + g.up + '元/㎡' +
                 sashNote +
                 (g.ext > 0 ? ' + ' + g.ext + '元' : '') + '  =  ' + g.cost.toFixed(2) + '元');
@@ -643,7 +643,7 @@
       var copts = {
         containerId: 'cabinetRooms', prefix: 'cabinet',
         areaLabel: '投影面积',
-        defaults: { width: '', height: 2.5, unitPrice: '', extra: '' }
+        defaults: { width: '', height: 2500, unitPrice: '', extra: '' }
       };
       var wopts = {
         containerId: 'windowRooms', prefix: 'window',
